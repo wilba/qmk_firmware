@@ -11,7 +11,7 @@
 #include "zeal_color.h"
 #include "IS31FL3731_driver.h"
 
-#define BACKLIGHT_EFFECT_MAX 9
+#define BACKLIGHT_EFFECT_MAX 10
 
 zeal_backlight_config g_config = {
 	.use_split_backspace = BACKLIGHT_USE_SPLIT_BACKSPACE,
@@ -550,6 +550,47 @@ void backlight_effect_jellybean_raindrops( bool initialize )
 	}
 }
 
+void backlight_effect_cycle_up_down_heat(void)
+{
+	uint8_t clock_offset = g_tick & 0xFF;
+	HSV hsv = { .h = 0, .s = 255, .v = g_config.brightness };
+	RGB rgb;
+	Point point;
+
+	uint16_t sum_of_keys = 0;
+	for (int i=0; i < 72; i++) {
+		sum_of_keys += g_key_hit[i];
+	}
+
+	uint8_t mean_key_time = sum_of_keys / 72;
+
+
+	for ( int i=0; i<72; i++ )
+	{
+		uint16_t time_since_hit = g_key_hit[i];
+		// stabilizer LEDs use spacebar hits
+		if ( i == 36+6 || i == 54+13 || // LC6, LD13
+				( g_config.use_7u_spacebar && i == 54+14 ) ) // LD14
+		{
+			time_since_hit = g_key_hit[36+0];
+		}
+		uint8_t offset3 = (time_since_hit<=63) ? (63-time_since_hit) : 0;
+
+		map_led_to_point( i, &point );
+		// Relies on hue being 8-bit and wrapping
+		hsv.h = point.y + clock_offset + offset3;
+
+
+		uint8_t key_heat = MIN(MAX(g_config.brightness - time_since_hit, 0), 255);
+		uint8_t ambient_heat = MIN(MAX(255 - mean_key_time, 0), 255);
+
+		hsv.v = MAX(key_heat, ambient_heat);
+
+		rgb = hsv_to_rgb( hsv );
+		backlight_set_color( i, rgb.r, rgb.g, rgb.b );
+	}
+}
+
 void backlight_effect_custom(void)
 {
 	HSV hsv;
@@ -712,9 +753,12 @@ ISR(TIMER3_COMPA_vect)
 			backlight_effect_cycle_up_down();
 			break;
 		case 8:
-			backlight_effect_jellybean_raindrops( initialize );
+			backlight_effect_cycle_up_down_heat();
 			break;
 		case 9:
+			backlight_effect_jellybean_raindrops( initialize );
+			break;
+		case 10:
 		default:
 			backlight_effect_custom();
 			break;

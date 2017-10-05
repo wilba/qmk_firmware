@@ -32,8 +32,7 @@
 #define RGBLIGHT_VAL_STEP 10   // How much each press of rgb_val changes val
 
 // Enable current limiting for RGB underglow.
-#define USB_MAX_POWER_CONSUMPTION 900
-#define RGBSTRIP_CURRENT_LIMIT 800        // Strip current limit in mA.
+#define RGBSTRIP_CURRENT_LIMIT 1300    // Strip current limit in mA. (USB amperage - 500mA for keyboard)
 #define RGBSTRIP_MAX_CURRENT_PER_LIGHT 40 // mA per light when at max brightness.
 
 // Scale brightnes according to BRIGHTNESS_CORRECTION_TABLE in quantum/rgblight.c.

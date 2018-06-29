@@ -116,6 +116,17 @@ void bootmagic_lite(void)
 		// Jump to bootloader.
 		bootloader_jump();
 	}
+
+        // If Esc, 1, and 2 keys are held down on power up,
+        // jump to thebootloader. Assumes Esc is at [0,0], 1
+        // is at [0,1], and 2 is at [0,2].
+        if ( ( matrix_get_row(0) & (1<<0) ) &&
+                ( matrix_get_row(0) & (1<<1) ) &&
+                ( matrix_get_row(0) & (1<<2) ) )
+        {
+                // Jump to bootloader.
+                bootloader_jump();
+        }
 }
 
 void matrix_init_kb(void)

@@ -155,7 +155,9 @@ void matrix_init_kb(void)
 
 		// This saves "empty" keymaps so it falls back to the keymaps
 		// in the firmware (aka. progmem/flash)
+#if USE_KEYMAPS_IN_EEPROM
 		keymap_default_save();
+#endif
 
 		// Save the magic number last, in case saving was interrupted
 		eeprom_set_valid(true);

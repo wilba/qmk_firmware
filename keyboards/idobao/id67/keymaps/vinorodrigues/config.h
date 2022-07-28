@@ -19,7 +19,6 @@
 #pragma once
 
 #if defined(RGB_MATRIX_ENABLE)
-    #define VIA_QMK_RGBLIGHT_ENABLE
     #define ID67_DISABLE_UNDERGLOW  // personal choice, I use a ID67 Bestype
 
     #ifdef RGB_MATRIX_MAXIMUM_BRIGHTNESS

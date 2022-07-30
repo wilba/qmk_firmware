@@ -123,7 +123,7 @@ float via_device_indication_song[][2] = SONG(STARTUP_SOUND);
 #endif
 
 // Used by VIA to tell a device to flash LEDs (or do something else) when that
-// device becomes the active device being configured, on startup or switching 
+// device becomes the active device being configured, on startup or switching
 // between devices. This function will be called six times, at 200ms interval,
 // with an incrementing value starting at zero. Since this function is called
 // an even number of times, it can call a toggle function and leave things in
@@ -262,6 +262,12 @@ __attribute__((weak)) void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
     *command_id         = id_unhandled;
 }
 
+// User level code can override this to handle ALL messages from VIA.
+// See raw_hid_receive() implementation.
+// DO NOT call raw_hid_send() in the override function.
+// NB: return `true` to indicate handled and override the default behaviour
+__attribute__((weak)) bool raw_hid_receive_user(uint8_t *data, uint8_t length) { return false; }
+
 // VIA handles received HID messages first, and will route to
 // raw_hid_receive_kb() for command IDs that are not handled here.
 // This gives the keyboard code level the ability to handle the command
@@ -270,174 +276,182 @@ __attribute__((weak)) void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
 // raw_hid_send() is called at the end, with the same buffer, which was
 // possibly modified with returned values.
 void raw_hid_receive(uint8_t *data, uint8_t length) {
-    uint8_t *command_id   = &(data[0]);
-    uint8_t *command_data = &(data[1]);
-    switch (*command_id) {
-        case id_get_protocol_version: {
-            command_data[0] = VIA_PROTOCOL_VERSION >> 8;
-            command_data[1] = VIA_PROTOCOL_VERSION & 0xFF;
-            break;
-        }
-        case id_get_keyboard_value: {
-            switch (command_data[0]) {
-                case id_uptime: {
-                    uint32_t value  = timer_read32();
-                    command_data[1] = (value >> 24) & 0xFF;
-                    command_data[2] = (value >> 16) & 0xFF;
-                    command_data[3] = (value >> 8) & 0xFF;
-                    command_data[4] = value & 0xFF;
-                    break;
-                }
-                case id_layout_options: {
-                    uint32_t value  = via_get_layout_options();
-                    command_data[1] = (value >> 24) & 0xFF;
-                    command_data[2] = (value >> 16) & 0xFF;
-                    command_data[3] = (value >> 8) & 0xFF;
-                    command_data[4] = value & 0xFF;
-                    break;
-                }
-                case id_switch_matrix_state: {
+    // raw_hid_receive_user allows the protocol to be overriden or complemented/modified
+    // return true to override default behavior [may break VIA interface]
+    // return false (default), optionally with data changed, for default handling
+    if (!raw_hid_receive_user(data, length)) {
+        uint8_t *command_id   = &(data[0]);
+        uint8_t *command_data = &(data[1]);
+        switch (*command_id) {
+            case id_get_protocol_version: {
+                command_data[0] = VIA_PROTOCOL_VERSION >> 8;
+                command_data[1] = VIA_PROTOCOL_VERSION & 0xFF;
+                break;
+            }
+            case id_get_keyboard_value: {
+                switch (command_data[0]) {
+                    case id_uptime: {
+                        uint32_t value  = timer_read32();
+                        command_data[1] = (value >> 24) & 0xFF;
+                        command_data[2] = (value >> 16) & 0xFF;
+                        command_data[3] = (value >> 8) & 0xFF;
+                        command_data[4] = value & 0xFF;
+                        break;
+                    }
+                    case id_layout_options: {
+                        uint32_t value  = via_get_layout_options();
+                        command_data[1] = (value >> 24) & 0xFF;
+                        command_data[2] = (value >> 16) & 0xFF;
+                        command_data[3] = (value >> 8) & 0xFF;
+                        command_data[4] = value & 0xFF;
+                        break;
+                    }
+                    case id_switch_matrix_state: {
 // Round up to the nearest number of bytes required to hold row state.
 // Multiply by number of rows to get the required size in bytes.
 // Guard against this being too big for the HID message.
 #if ( ((MATRIX_COLS+7)/8) * MATRIX_ROWS <= 28 )
-                    uint8_t i = 1;
-                    for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-                        matrix_row_t value = matrix_get_row(row);
+                        uint8_t i = 1;
+                        for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+                            matrix_row_t value = matrix_get_row(row);
 #    if (MATRIX_COLS > 24)
-                        command_data[i++] = (value >> 24) & 0xFF;
+                            command_data[i++] = (value >> 24) & 0xFF;
 #    endif
 #    if (MATRIX_COLS > 16)
-                        command_data[i++] = (value >> 16) & 0xFF;
+                            command_data[i++] = (value >> 16) & 0xFF;
 #    endif
 #    if (MATRIX_COLS > 8)
-                        command_data[i++] = (value >> 8) & 0xFF;
+                            command_data[i++] = (value >> 8) & 0xFF;
 #    endif
-                        command_data[i++] = value & 0xFF;
+                            command_data[i++] = value & 0xFF;
+                        }
+#endif
+                        break;
                     }
-#endif
-                    break;
+                    case id_firmware_version: {
+                        uint32_t value  = VIA_FIRMWARE_VERSION;
+                        command_data[1] = (value >> 24) & 0xFF;
+                        command_data[2] = (value >> 16) & 0xFF;
+                        command_data[3] = (value >> 8) & 0xFF;
+                        command_data[4] = value & 0xFF;
+                        break;
+                    }
+                    default: {
+                        raw_hid_receive_kb(data, length);
+                        break;
+                    }
                 }
-                case id_firmware_version: {
-                    uint32_t value  = VIA_FIRMWARE_VERSION;
-                    command_data[1] = (value >> 24) & 0xFF;
-                    command_data[2] = (value >> 16) & 0xFF;
-                    command_data[3] = (value >> 8) & 0xFF;
-                    command_data[4] = value & 0xFF;
-                    break;
-                }
-                default: {
-                    raw_hid_receive_kb(data, length);
-                    break;
-                }
+                break;
             }
-            break;
-        }
-        case id_set_keyboard_value: {
-            switch (command_data[0]) {
-                case id_layout_options: {
-                    uint32_t value = ((uint32_t)command_data[1] << 24) | ((uint32_t)command_data[2] << 16) | ((uint32_t)command_data[3] << 8) | (uint32_t)command_data[4];
-                    via_set_layout_options(value);
-                    break;
+            case id_set_keyboard_value: {
+                switch (command_data[0]) {
+                    case id_layout_options: {
+                        uint32_t value = ((uint32_t)command_data[1] << 24) | ((uint32_t)command_data[2] << 16) | ((uint32_t)command_data[3] << 8) | (uint32_t)command_data[4];
+                        via_set_layout_options(value);
+                        break;
+                    }
+                    case id_device_indication: {
+                        uint8_t value = command_data[1];
+                        via_set_device_indication(value);
+                        break;
+                    }
+                    default: {
+                        raw_hid_receive_kb(data, length);
+                        break;
+                    }
                 }
-                case id_device_indication: {
-                    uint8_t value = command_data[1];
-                    via_set_device_indication(value);
-                    break;
-                }
-                default: {
-                    raw_hid_receive_kb(data, length);
-                    break;
-                }
+                break;
             }
-            break;
-        }
-        case id_dynamic_keymap_get_keycode: {
-            uint16_t keycode = dynamic_keymap_get_keycode(command_data[0], command_data[1], command_data[2]);
-            command_data[3]  = keycode >> 8;
-            command_data[4]  = keycode & 0xFF;
-            break;
-        }
-        case id_dynamic_keymap_set_keycode: {
-            dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
-            break;
-        }
-        case id_dynamic_keymap_reset: {
-            dynamic_keymap_reset();
-            break;
-        }
-        case id_custom_set_value:
-        case id_custom_get_value:
-        case id_custom_save: {
-            via_custom_value_command(data, length);
-            break;
-        }
+            case id_dynamic_keymap_get_keycode: {
+                uint16_t keycode = dynamic_keymap_get_keycode(command_data[0], command_data[1], command_data[2]);
+                command_data[3]  = keycode >> 8;
+                command_data[4]  = keycode & 0xFF;
+                break;
+            }
+            case id_dynamic_keymap_set_keycode: {
+                dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+                break;
+            }
+            case id_dynamic_keymap_reset: {
+                dynamic_keymap_reset();
+                break;
+            }
+            case id_custom_set_value:
+            case id_custom_get_value:
+            case id_custom_save: {
+                via_custom_value_command(data, length);
+                break;
+            }
 #ifdef VIA_EEPROM_ALLOW_RESET
-        case id_eeprom_reset: {
-            via_eeprom_set_valid(false);
-            eeconfig_init_via();
-            break;
-        }
+            case id_eeprom_reset: {
+                via_eeprom_set_valid(false);
+                eeconfig_init_via();
+                break;
+            }
 #endif
-        case id_dynamic_keymap_macro_get_count: {
-            command_data[0] = dynamic_keymap_macro_get_count();
-            break;
-        }
-        case id_dynamic_keymap_macro_get_buffer_size: {
-            uint16_t size   = dynamic_keymap_macro_get_buffer_size();
-            command_data[0] = size >> 8;
-            command_data[1] = size & 0xFF;
-            break;
-        }
-        case id_dynamic_keymap_macro_get_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_macro_get_buffer(offset, size, &command_data[3]);
-            break;
-        }
-        case id_dynamic_keymap_macro_set_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_macro_set_buffer(offset, size, &command_data[3]);
-            break;
-        }
-        case id_dynamic_keymap_macro_reset: {
-            dynamic_keymap_macro_reset();
-            break;
-        }
-        case id_dynamic_keymap_get_layer_count: {
-            command_data[0] = dynamic_keymap_get_layer_count();
-            break;
-        }
-        case id_dynamic_keymap_get_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_get_buffer(offset, size, &command_data[3]);
-            break;
-        }
-        case id_dynamic_keymap_set_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_set_buffer(offset, size, &command_data[3]);
-            break;
-        }
+            case id_dynamic_keymap_macro_get_count: {
+                command_data[0] = dynamic_keymap_macro_get_count();
+                break;
+            }
+            case id_dynamic_keymap_macro_get_buffer_size: {
+                uint16_t size   = dynamic_keymap_macro_get_buffer_size();
+                command_data[0] = size >> 8;
+                command_data[1] = size & 0xFF;
+                break;
+            }
+            case id_dynamic_keymap_macro_get_buffer: {
+                uint16_t offset = (command_data[0] << 8) | command_data[1];
+                uint16_t size   = command_data[2]; // size <= 28
+                dynamic_keymap_macro_get_buffer(offset, size, &command_data[3]);
+                break;
+            }
+            case id_dynamic_keymap_macro_set_buffer: {
+                uint16_t offset = (command_data[0] << 8) | command_data[1];
+                uint16_t size   = command_data[2]; // size <= 28
+                dynamic_keymap_macro_set_buffer(offset, size, &command_data[3]);
+                break;
+            }
+            case id_dynamic_keymap_macro_reset: {
+                dynamic_keymap_macro_reset();
+                break;
+            }
+            case id_dynamic_keymap_get_layer_count: {
+                command_data[0] = dynamic_keymap_get_layer_count();
+                break;
+            }
+            case id_dynamic_keymap_get_buffer: {
+                uint16_t offset = (command_data[0] << 8) | command_data[1];
+                uint16_t size   = command_data[2]; // size <= 28
+                dynamic_keymap_get_buffer(offset, size, &command_data[3]);
+                break;
+            }
+            case id_dynamic_keymap_set_buffer: {
+                uint16_t offset = (command_data[0] << 8) | command_data[1];
+                uint16_t size   = command_data[2]; // size <= 28
+                dynamic_keymap_set_buffer(offset, size, &command_data[3]);
+                break;
+            }
 #ifdef ENCODER_MAP_ENABLE
-        case id_dynamic_keymap_get_encoder: {
-            uint16_t keycode = dynamic_keymap_get_encoder(command_data[0], command_data[1], command_data[2] != 0);
-            command_data[3]  = keycode >> 8;
-            command_data[4]  = keycode & 0xFF;
-            break;
-        }
-        case id_dynamic_keymap_set_encoder: {
-            dynamic_keymap_set_encoder(command_data[0], command_data[1], command_data[2] != 0, (command_data[3] << 8) | command_data[4]);
-            break;
-        }
+            case id_dynamic_keymap_get_encoder: {
+                uint16_t keycode = dynamic_keymap_get_encoder(command_data[0], command_data[1], command_data[2] != 0);
+                command_data[3]  = keycode >> 8;
+                command_data[4]  = keycode & 0xFF;
+                break;
+            }
+            case id_dynamic_keymap_set_encoder: {
+                dynamic_keymap_set_encoder(command_data[0], command_data[1], command_data[2] != 0, (command_data[3] << 8) | command_data[4]);
+                break;
+            }
 #endif
-        default: {
-            // The command ID is not known
-            // Return the unhandled state
-            *command_id = id_unhandled;
-            break;
+            default: {
+                // The command ID is not known
+                // Return the unhandled state, set by default raw_hid_receive_kb
+                // use raw_hid_receive_kb to add kb specific RAWHID [not handled by VIA]
+                // always set *command_id { or &(data[0]) } = id_unhandled;
+                // use command_id >= 0xF0 for non-VIA command sets
+                raw_hid_receive_kb(data, length);
+                break;
+            }
         }
     }
 

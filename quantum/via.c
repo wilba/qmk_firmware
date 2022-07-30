@@ -448,6 +448,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 // Return the unhandled state, set by default raw_hid_receive_kb
                 // use raw_hid_receive_kb to add kb specific RAWHID [not handled by VIA]
                 // always set *command_id { or &(data[0]) } = id_unhandled;
+                // use command_id >= 0xF0 for non-VIA command sets
                 raw_hid_receive_kb(data, length);
                 break;
             }

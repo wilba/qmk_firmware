@@ -254,24 +254,22 @@ __attribute__((weak)) void via_custom_value_command(uint8_t *data, uint8_t lengt
 }
 
 // Keyboard level code can override this, but shouldn't need to.
-// Override via_custom_value_command_kb() or via_custom_value_command()
-// instead.
-// DO NOT call raw_hid_send() in the override function.
-__attribute__((weak)) void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
-    uint8_t *command_id = &(data[0]);
-    *command_id         = id_unhandled;
+// Controlling custom features should be done by overriding 
+// via_custom_value_command_kb() instead. 
+__attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
+    return false;
 }
 
-// VIA handles received HID messages first, and will route to
-// raw_hid_receive_kb() for command IDs that are not handled here.
-// This gives the keyboard code level the ability to handle the command
-// specifically.
-//
-// raw_hid_send() is called at the end, with the same buffer, which was
-// possibly modified with returned values.
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
     uint8_t *command_data = &(data[1]);
+
+    // If via_command_kb() returns true, the command was fully
+    // handled, including calling raw_hid_send()
+    if ( via_command_kb(data, length) ) {
+        return;
+    }
+
     switch (*command_id) {
         case id_get_protocol_version: {
             command_data[0] = VIA_PROTOCOL_VERSION >> 8;
@@ -327,7 +325,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     break;
                 }
                 default: {
-                    raw_hid_receive_kb(data, length);
+                    // The value ID is not known
+                    // Return the unhandled state
+                    *command_id = id_unhandled;
                     break;
                 }
             }
@@ -346,7 +346,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     break;
                 }
                 default: {
-                    raw_hid_receive_kb(data, length);
+                    // The value ID is not known
+                    // Return the unhandled state
+                    *command_id = id_unhandled;
                     break;
                 }
             }

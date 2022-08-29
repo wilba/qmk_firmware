@@ -4,11 +4,6 @@
 #pragma once
 #include "config_common.h"
 
-// USB Device descriptor parameter
-#define VENDOR_ID       0x6582 // wilba.tech
-#define PRODUCT_ID      0x0032 // PCB #50
-#define DEVICE_VER      0x0001
-#define MANUFACTURER    wilba.tech
 // "C2" in PRODUCT would be expanded to "((0x6 << 4) | 2)"
 // because it's a pin definition. Fixed by using
 // character literals. 

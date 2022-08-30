@@ -18,10 +18,6 @@
 
 #include "config_common.h"
 
-/* USB Device descriptor parameter */
-#define VENDOR_ID       0xD60D
-#define MANUFACTURER    Hoksi Technology
-
 #define WAIT_US_TIMER           GPTD3
 
 /* COL2ROW, ROW2COL*/
@@ -133,8 +129,5 @@
 #    define ENABLE_RGB_MATRIX_MULTISPLASH
 #    define ENABLE_RGB_MATRIX_SOLID_SPLASH
 #    define ENABLE_RGB_MATRIX_SOLID_MULTISPLASH
-
-// This allows VIA to control RGB Matrix settings in the 'Lighting' section.
-#define VIA_QMK_RGBLIGHT_ENABLE
 
 #endif /* RGB_MATRIX_ENABLE */

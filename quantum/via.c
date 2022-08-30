@@ -32,6 +32,10 @@
 #include "version.h" // for QMK_BUILDDATE used in EEPROM magic
 #include "via_ensure_keycode.h"
 
+#if defined(VIA_QMK_RGB_MATRIX_ENABLE)
+#    include <lib/lib8tion/lib8tion.h>
+#endif
+
 // Can be called in an overriding via_init_kb() to test if keyboard level code usage of
 // EEPROM is invalid and use/save defaults.
 bool via_eeprom_is_valid(void) {
@@ -486,7 +490,7 @@ void via_qmk_backlight_get_value(uint8_t *data) {
     switch (*value_id) {
         case id_qmk_backlight_brightness: {
             // level / BACKLIGHT_LEVELS * 255
-            value_data[0] = ((uint16_t)get_backlight_level()) * 255 / BACKLIGHT_LEVELS;
+            value_data[0] = ((uint16_t)get_backlight_level() * UINT8_MAX) / BACKLIGHT_LEVELS;
             break;
         }
         case id_qmk_backlight_effect: {
@@ -507,7 +511,7 @@ void via_qmk_backlight_set_value(uint8_t *data) {
     switch (*value_id) {
         case id_qmk_backlight_brightness: {
             // level / 255 * BACKLIGHT_LEVELS
-            backlight_level_noeeprom(((uint16_t)value_data[0]) * BACKLIGHT_LEVELS / 255);
+            backlight_level_noeeprom(((uint16_t)value_data[0] * BACKLIGHT_LEVELS) / UINT8_MAX);
             break;
         }
         case id_qmk_backlight_effect: {
@@ -528,6 +532,9 @@ void via_qmk_backlight_save(void) { eeconfig_update_backlight_current(); }
 #endif  // #if defined(VIA_QMK_BACKLIGHT_ENABLE)
 
 #if defined(VIA_QMK_RGBLIGHT_ENABLE)
+#    ifndef RGBLIGHT_LIMIT_VAL
+#        define RGBLIGHT_LIMIT_VAL 255
+#    endif
 
 void via_qmk_rgblight_command(uint8_t *data, uint8_t length) {
     // data = [ command_id, channel_id, value_id, value_data ]
@@ -560,7 +567,7 @@ void via_qmk_rgblight_get_value(uint8_t *data) {
     uint8_t *value_data = &(data[1]);
     switch (*value_id) {
         case id_qmk_rgblight_brightness: {
-            value_data[0] = rgblight_get_val();
+            value_data[0] = ((uint16_t)rgblight_get_val() * UINT8_MAX) / RGBLIGHT_LIMIT_VAL;
             break;
         }
         case id_qmk_rgblight_effect: {
@@ -585,7 +592,7 @@ void via_qmk_rgblight_set_value(uint8_t *data) {
     uint8_t *value_data = &(data[1]);
     switch (*value_id) {
         case id_qmk_rgblight_brightness: {
-            rgblight_sethsv_noeeprom(rgblight_get_hue(), rgblight_get_sat(), value_data[0]);
+            rgblight_sethsv_noeeprom(rgblight_get_hue(), rgblight_get_sat(), ((uint16_t)value_data[0] * RGBLIGHT_LIMIT_VAL) / UINT8_MAX);
             break;
         }
         case id_qmk_rgblight_effect: {
@@ -613,6 +620,11 @@ void via_qmk_rgblight_save(void) { eeconfig_update_rgblight_current(); }
 #endif  // #if defined(VIA_QMK_RGBLIGHT_ENABLE)
 
 #if defined(VIA_QMK_RGB_MATRIX_ENABLE)
+
+#    if !defined(RGB_MATRIX_MAXIMUM_BRIGHTNESS) || RGB_MATRIX_MAXIMUM_BRIGHTNESS > UINT8_MAX
+#        undef RGB_MATRIX_MAXIMUM_BRIGHTNESS
+#        define RGB_MATRIX_MAXIMUM_BRIGHTNESS UINT8_MAX
+#    endif
 
 void via_qmk_rgb_matrix_command(uint8_t *data, uint8_t length) {
     // data = [ command_id, channel_id, value_id, value_data ]
@@ -643,9 +655,10 @@ void via_qmk_rgb_matrix_get_value(uint8_t *data) {
     // data = [ value_id, value_data ]
     uint8_t *value_id   = &(data[0]);
     uint8_t *value_data = &(data[1]);
+
     switch (*value_id) {
-        case id_qmk_rgb_matrix_brightness: {
-            value_data[0] = rgb_matrix_get_val();
+        case id_qmk_rgblight_brightness:
+            value_data[0] = ((uint16_t)rgb_matrix_get_val() * UINT8_MAX) / RGB_MATRIX_MAXIMUM_BRIGHTNESS;
             break;
         }
         case id_qmk_rgb_matrix_effect: {
@@ -669,8 +682,9 @@ void via_qmk_rgb_matrix_set_value(uint8_t *data) {
     uint8_t *value_id   = &(data[0]);
     uint8_t *value_data = &(data[1]);
     switch (*value_id) {
-        case id_qmk_rgb_matrix_brightness: {
-            rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(), value_data[0]);
+
+        case id_qmk_rgblight_brightness:
+            rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(), scale8(value_data[0], RGB_MATRIX_MAXIMUM_BRIGHTNESS));
             break;
         }
         case id_qmk_rgb_matrix_effect: {

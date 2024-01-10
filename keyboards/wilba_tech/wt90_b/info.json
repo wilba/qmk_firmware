@@ -30,7 +30,7 @@
         }
     },
     "rgb_matrix": {
-        "driver": "WS2812",
+        "driver": "ws2812",
         "animations": {
             "alphas_mods": false,
             "gradient_up_down": true,
@@ -81,5 +81,8 @@
             { "flags": 4, "matrix": [1, 0], "x": 0, "y": 16 },
             { "flags": 4, "matrix": [0, 0], "x": 0, "y": 0 }
         ]
+    },
+    "ws2812": {
+        "pin": "B0"
     }
 }

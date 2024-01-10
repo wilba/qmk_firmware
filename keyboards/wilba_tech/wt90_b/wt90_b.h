@@ -5,6 +5,8 @@
 
 #include "quantum.h"
 
+HSV get_indicator_color(uint8_t index);
+
 #define ____ KC_NO
 
 #define LAYOUT( \

@@ -1,0 +1,111 @@
+{
+    "manufacturer": "wilba.tech",
+    "keyboard_name": "WT6-KH",
+    "maintainer": "Wilba",
+    "bootloader": "atmel-dfu",
+    "build": {
+        "lto": true
+    },
+    "diode_direction": "COL2ROW",
+    "features": {
+        "bootmagic": true,
+        "extrakey": true,
+        "mousekey": true,
+        "nkro": true,
+        "rgb_matrix": true
+    },
+    "matrix_pins": {
+        "direct": [
+            ["D7", "B4", "F0"],
+            ["B5", "B6", "C6"]
+        ]
+    },
+    "processor": "atmega32u4",
+    "qmk": {
+        "locking": {
+            "enabled": true,
+            "resync": true
+        }
+    },
+    "rgb_matrix": {
+        "animations": {
+            "alphas_mods": false,
+            "band_pinwheel_sat": false,
+            "band_pinwheel_val": false,
+            "band_sat": false,
+            "band_spiral_sat": false,
+            "band_spiral_val": false,
+            "band_val": false,
+            "breathing": true,
+            "cycle_all": true,
+            "cycle_left_right": true,
+            "cycle_out_in": true,
+            "cycle_out_in_dual": true,
+            "cycle_pinwheel": false,
+            "cycle_spiral": true,
+            "cycle_up_down": false,
+            "digital_rain": false,
+            "dual_beacon": false,
+            "gradient_left_right": true,
+            "gradient_up_down": false,
+            "hue_breathing": true,
+            "hue_pendulum": true,
+            "hue_wave": true,
+            "jellybean_raindrops": true,
+            "multisplash": false,
+            "pixel_flow": true,
+            "pixel_fractal": false,
+            "pixel_rain": true,
+            "rainbow_beacon": false,
+            "rainbow_moving_chevron": false,
+            "rainbow_pinwheels": false,
+            "raindrops": true,
+            "solid_multisplash": false,
+            "solid_reactive": true,
+            "solid_reactive_cross": true,
+            "solid_reactive_multicross": false,
+            "solid_reactive_multinexus": false,
+            "solid_reactive_multiwide": false,
+            "solid_reactive_nexus": true,
+            "solid_reactive_simple": true,
+            "solid_reactive_wide": true,
+            "solid_splash": true,
+            "splash": true,
+            "typing_heatmap": false
+        },
+        "driver": "ws2812",
+        "center_point": [16, 8],
+        "led_flush_limit" : 6,
+        "led_process_limit": 6,
+        "led_count": 6,
+        "layout": [
+            {"matrix": [0, 2], "x": 32, "y": 0, "flags": 4},
+            {"matrix": [0, 1], "x": 16, "y": 0, "flags": 4},
+            {"matrix": [0, 0], "x": 0, "y": 0, "flags": 4},
+            {"matrix": [1, 0], "x": 0, "y": 16, "flags": 4},
+            {"matrix": [1, 1], "x": 16, "y": 16, "flags": 4},
+            {"matrix": [1, 2], "x": 32, "y": 16, "flags": 4}
+        ]
+    },
+    "url": "https://wilba.tech",
+    "usb": {
+        "device_version": "0.0.1",
+        "pid": "0x0043",
+        "vid": "0x6582"
+    },
+    "ws2812": {
+        "pin": "C7"
+    },
+    "layouts": {
+        "LAYOUT": {
+            "layout": [
+                {"matrix": [0, 0], "x": 0, "y": 0},
+                {"matrix": [0, 1], "x": 1, "y": 0},
+                {"matrix": [0, 2], "x": 2, "y": 0},
+                {"matrix": [1, 0], "x": 0, "y": 1},
+                {"matrix": [1, 1], "x": 1, "y": 1},
+                {"matrix": [1, 2], "x": 2, "y": 1}
+            ]
+        }
+    }
+}
